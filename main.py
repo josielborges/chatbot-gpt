@@ -4,6 +4,7 @@ from flask import Flask, render_template, request
 
 from helpers import *
 from persona_selection import *
+from document_selection import *
 
 load_dotenv()
 
@@ -13,7 +14,7 @@ model = 'gpt-4'
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 
-context = load('data/ecomart.txt')
+# context = load('data/ecomart_politics.txt')
 
 
 @app.route('/')
@@ -34,6 +35,8 @@ def bot(prompt):
     i = 0
 
     persona = personas[select_persona(prompt)]
+    context = select_context(prompt)
+    selected_document = select_document(context)
 
     while True:
         try:
@@ -45,7 +48,7 @@ def bot(prompt):
             Você deve adotar a persona abaixo.
             
             # Contexto
-            {context}
+            {selected_document}
             
             # Persona
             {persona}
