@@ -1,10 +1,11 @@
+import os
 from time import sleep
 
+from dotenv import load_dotenv
 from flask import Flask, render_template, request
+from openai import OpenAI
 
-from helpers import *
-from persona_selection import *
-from document_selection import *
+from assistant import create_assistant, create_thread
 
 load_dotenv()
 
@@ -14,7 +15,8 @@ model = 'gpt-4'
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 
-# context = load('data/ecomart_politics.txt')
+assistant = create_assistant()
+thread = create_thread()
 
 
 @app.route('/')
@@ -26,7 +28,7 @@ def home():
 def chat():
     prompt = request.json['msg']
     response = bot(prompt)
-    response_text = response.choices[0].message.content
+    response_text = response.content[0].text.value
     return response_text
 
 
@@ -34,46 +36,27 @@ def bot(prompt):
     max_try = 1
     i = 0
 
-    persona = personas[select_persona(prompt)]
-    context = select_context(prompt)
-    selected_document = select_document(context)
-
     while True:
         try:
-            system_prompt = f"""
-            Você é um chatbot de atendimento a clientes de um e-commerce. 
-            Você não deve responder perguntas que não sejam dados do e-commerce informado!
-            
-            Você deve gerar respostas utilizando o contexto abaixo.
-            Você deve adotar a persona abaixo.
-            
-            # Contexto
-            {selected_document}
-            
-            # Persona
-            {persona}
-            """
-
-            print(system_prompt)
-
-            response = client.chat.completions.create(
-                messages=[
-                    {
-                        "role": "system",
-                        "content": system_prompt
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=1,
-                max_tokens=256,
-                top_p=1,
-                frequency_penalty=0,
-                presence_penalty=0,
-                model=model
+            client.beta.threads.messages.create(
+                thread_id=thread.id,
+                role='user',
+                content=prompt
             )
+
+            run = client.beta.threads.runs.create(
+                thread_id=thread.id,
+                assistant_id=assistant.id
+            )
+
+            while run.status != 'completed':
+                run = client.beta.threads.runs.retrieve(
+                    thread_id=thread.id,
+                    run_id=run.id
+                )
+
+            history = list(client.beta.threads.messages.list(thread_id=thread.id).data)
+            response = history[0]
             return response
         except Exception as e:
             i += 1
