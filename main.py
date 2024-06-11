@@ -1,10 +1,9 @@
-import os
 from time import sleep
 
-from dotenv import load_dotenv
 from flask import Flask, render_template, request
-from openai import OpenAI
+
 from helpers import *
+from persona_selection import *
 
 load_dotenv()
 
@@ -15,6 +14,7 @@ app = Flask(__name__)
 app.config.from_pyfile('config.py')
 
 context = load('data/ecomart.txt')
+
 
 @app.route('/')
 def home():
@@ -33,6 +33,8 @@ def bot(prompt):
     max_try = 1
     i = 0
 
+    persona = personas[select_persona(prompt)]
+
     while True:
         try:
             system_prompt = f"""
@@ -40,9 +42,13 @@ def bot(prompt):
             Você não deve responder perguntas que não sejam dados do e-commerce informado!
             
             Você deve gerar respostas utilizando o contexto abaixo.
+            Você deve adotar a persona abaixo.
             
             # Contexto
             {context}
+            
+            # Persona
+            {persona}
             """
 
             print(system_prompt)
