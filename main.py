@@ -4,6 +4,7 @@ from time import sleep
 from dotenv import load_dotenv
 from flask import Flask, render_template, request
 from openai import OpenAI
+from helpers import *
 
 load_dotenv()
 
@@ -13,6 +14,7 @@ model = 'gpt-4'
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 
+context = load('data/ecomart.txt')
 
 @app.route('/')
 def home():
@@ -36,7 +38,14 @@ def bot(prompt):
             system_prompt = f"""
             Você é um chatbot de atendimento a clientes de um e-commerce. 
             Você não deve responder perguntas que não sejam dados do e-commerce informado!
+            
+            Você deve gerar respostas utilizando o contexto abaixo.
+            
+            # Contexto
+            {context}
             """
+
+            print(system_prompt)
 
             response = client.chat.completions.create(
                 messages=[
