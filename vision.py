@@ -51,5 +51,3 @@ def analyse_image(image):
     )
 
     return response.choices[0].message.content
-
-# print(analyse_image('data/tvquebrada.jpeg'))
