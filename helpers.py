@@ -1,3 +1,6 @@
+import base64
+
+
 def load(filename):
     try:
         with open(filename, 'r') as file:
@@ -13,3 +16,8 @@ def save(filename, data):
             file.write(data)
     except IOError as e:
         print(f'Erro ao salvar o arquivo: {e}')
+
+
+def encode_image(filename):
+    with open(filename, 'rb') as file:
+        return base64.b64encode(file.read()).decode('utf-8')

@@ -1,5 +1,6 @@
 import json
 import os
+import uuid
 from time import sleep
 
 from dotenv import load_dotenv
@@ -9,6 +10,7 @@ from openai import OpenAI
 from assistant import get_json
 from persona_selection import personas, select_persona
 from tools import functions
+from vision import analyse_image
 
 load_dotenv()
 
@@ -26,6 +28,9 @@ assistant_id = assistant['assistant_id']
 STATUS_COMPLETED = 'completed'
 STATUS_REQUIRES_ACTION = 'requires_action'
 
+sent_image_path = None
+UPLOAD_FOLDER = 'data'
+
 
 @app.route('/')
 def home():
@@ -40,13 +45,44 @@ def chat():
     return response_text
 
 
+@app.route('/image_upload', methods=["POST"])
+def image_upload():
+    global sent_image_path
+    print(request.files)
+    if 'imagem' in request.files:
+        image = request.files['imagem']
+
+        filename = str(uuid.uuid4()) + os.path.splitext(image.filename)[1]
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        image.save(filepath)
+        sent_image_path = filepath
+
+        print(image)
+        return 'Imagem recebida com sucesso', 200
+    return 'Nenhum arquivo foi enviado', 400
+
+
 def bot(prompt):
+    global sent_image_path
     max_try = 1
     i = 0
 
     while True:
         try:
             persona = personas[select_persona(prompt)]
+
+            vision_response = ''
+            if sent_image_path != None:
+                vision_response = analyse_image(sent_image_path)
+                vision_response += '. Na resposta final, apresente detalhes da descrição da imagem.'
+                os.remove(sent_image_path)
+                sent_image_path = None
+
+            client.beta.threads.messages.create(
+                thread_id=thread_id,
+                role='user',
+                content=vision_response + '\n' + prompt
+            )
 
             client.beta.threads.messages.create(
                 thread_id=thread_id,
